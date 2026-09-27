@@ -15,12 +15,12 @@ public class HelloController {
     private List<String> arrayList;
     private Map<Integer, String> hashMap;
 
-    @GetMapping("/hello")
+    @GetMapping(value = "/hello", produces = "text/plain;charset=UTF-8")
     public String hello(@RequestParam(value = "name", defaultValue = "World") String name) {
         return "Hello, " + name + "!";
     }
 
-    @GetMapping("/update-array")
+    @GetMapping(value = "/update-array", produces = "text/plain;charset=UTF-8")
     public String updateArrayList(@RequestParam String s) {
         if (arrayList == null) {
             arrayList = new ArrayList<>();
@@ -34,7 +34,7 @@ public class HelloController {
         return arrayList == null ? new ArrayList<>() : arrayList;
     }
 
-    @GetMapping("/update-map")
+    @GetMapping(value = "/update-map", produces = "text/plain;charset=UTF-8")
     public String updateHashMap(@RequestParam String s) {
         if (hashMap == null) {
             hashMap = new HashMap<>();
@@ -48,7 +48,7 @@ public class HelloController {
         return hashMap == null ? new HashMap<>() : hashMap;
     }
 
-    @GetMapping("/show-all-lenght")
+    @GetMapping(value = "/show-all-lenght", produces = "text/plain;charset=UTF-8")
     public String showAllLenght() {
         int arraySize = arrayList == null ? 0 : arrayList.size();
         int mapSize = hashMap == null ? 0 : hashMap.size();
