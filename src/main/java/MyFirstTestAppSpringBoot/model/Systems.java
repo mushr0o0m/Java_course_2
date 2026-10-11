@@ -1,7 +1,11 @@
 package MyFirstTestAppSpringBoot.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public enum Systems {
-    ERP, // Enterprise Resource Planning
-    CRM, // Customer Relationship Management
-    WMS  // Warehouse Management System
+    ERP,
+    CRM,
+    WMS,
+    @JsonProperty("Service 1")
+    SERVICE_1
 }

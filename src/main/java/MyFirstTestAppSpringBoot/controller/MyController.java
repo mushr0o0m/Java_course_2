@@ -4,6 +4,8 @@ import MyFirstTestAppSpringBoot.exception.UnsupportedCodeException;
 import MyFirstTestAppSpringBoot.exception.ValidationFailedException;
 import MyFirstTestAppSpringBoot.model.*;
 import MyFirstTestAppSpringBoot.service.MyService;
+import MyFirstTestAppSpringBoot.service.ModifyRequestService;
+import MyFirstTestAppSpringBoot.service.RequestForwardingService;
 import MyFirstTestAppSpringBoot.service.ModifyResponseService;
 import MyFirstTestAppSpringBoot.util.DateTimeUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -23,20 +25,34 @@ public class MyController {
     private final ModifyResponseService operationUidService;
     private final ModifyResponseService systemTimeService;
 
+    private final ModifyRequestService systemNameRequestService;
+    private final ModifyRequestService sourceRequestService;
+    private final RequestForwardingService forwardingService;
+
     public MyController(MyService myService,
             @Qualifier("ModifyOperationUidResponseService") ModifyResponseService operationUidService,
-            @Qualifier("ModifySystemTimeResponseService") ModifyResponseService systemTimeService) {
+            @Qualifier("ModifySystemTimeResponseService") ModifyResponseService systemTimeService,
+            @Qualifier("ModifySystemNameRequestService") ModifyRequestService systemNameRequestService,
+            @Qualifier("ModifySourceRequestService") ModifyRequestService sourceRequestService,
+            RequestForwardingService forwardingService) {
         this.myService = myService;
         this.operationUidService = operationUidService;
         this.systemTimeService = systemTimeService;
+        this.systemNameRequestService = systemNameRequestService;
+        this.sourceRequestService = sourceRequestService;
+        this.forwardingService = forwardingService;
     }
 
-    @PostMapping({"/api/request", "/test"})
+    @PostMapping({"/api/request", "/test", "/feedback"})
     public Response process(@Valid @RequestBody Request request) {
+        long receivedAt = System.currentTimeMillis();
         log.info("Получен запрос: {}", request);
         Response response = myService.process(request);
         operationUidService.modify(response);
         systemTimeService.modify(response);
+        systemNameRequestService.modify(request);
+        sourceRequestService.modify(request);
+        forwardingService.forward(request, receivedAt);
         log.info("Отправлен ответ: {}", response);
         return response;
     }

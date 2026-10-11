@@ -1,6 +1,8 @@
 package MyFirstTestAppSpringBoot.controller;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import MyFirstTestAppSpringBoot.service.RequestForwardingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +19,9 @@ class MyControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private RequestForwardingService forwardingService;
 
     @Test
     void validRequestReturnsSuccessResponse() throws Exception {
@@ -114,6 +119,27 @@ class MyControllerTest {
                         .content(validRequest("1").replace("ERP", "UNKNOWN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("ValidationException"));
+    }
+
+    @Test
+    void controllerForwardsAfterBothModifications() throws Exception {
+        mockMvc.perform(post("/feedback").contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest("1"))).andExpect(status().isOk());
+        org.mockito.ArgumentCaptor<MyFirstTestAppSpringBoot.model.Request> request =
+                org.mockito.ArgumentCaptor.forClass(MyFirstTestAppSpringBoot.model.Request.class);
+        org.mockito.ArgumentCaptor<Long> time = org.mockito.ArgumentCaptor.forClass(Long.class);
+        org.mockito.Mockito.verify(forwardingService).forward(request.capture(), time.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                MyFirstTestAppSpringBoot.model.Systems.SERVICE_1, request.getValue().getSystemName());
+        org.junit.jupiter.api.Assertions.assertEquals("Service 1", request.getValue().getSource());
+        org.junit.jupiter.api.Assertions.assertTrue(time.getValue() <= System.currentTimeMillis());
+    }
+
+    @Test
+    void invalidRequestIsNotForwarded() throws Exception {
+        mockMvc.perform(post("/feedback").contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest(""))).andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(forwardingService);
     }
 
     private String validRequest(String uid) {
