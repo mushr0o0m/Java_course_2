@@ -26,7 +26,10 @@ class MyControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("success"))
                 .andExpect(jsonPath("$.uid").value("1"))
-                .andExpect(jsonPath("$.operationUid").value("operation-1"))
+                .andExpect(jsonPath("$.operationUid").value(org.hamcrest.Matchers.matchesPattern(
+                        "[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")))
+                .andExpect(jsonPath("$.systemTime").value(org.hamcrest.Matchers.matchesPattern(
+                        "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z")))
                 .andExpect(jsonPath("$.errorCode").value(""));
     }
 
@@ -93,7 +96,24 @@ class MyControllerTest {
                         .content(validRequest("123")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("failed"))
-                .andExpect(jsonPath("$.errorCode").value("Unsupported Code Exception"));
+                .andExpect(jsonPath("$.errorCode").value("UnsupportedException"));
+    }
+
+    @Test
+    void allSystemsAreAccepted() throws Exception {
+        for (String system : new String[]{"ERP", "CRM", "WMS"}) {
+            mockMvc.perform(post("/test").contentType(MediaType.APPLICATION_JSON)
+                            .content(validRequest("1").replace("ERP", system)))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void unknownSystemIsRejected() throws Exception {
+        mockMvc.perform(post("/api/request").contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest("1").replace("ERP", "UNKNOWN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("ValidationException"));
     }
 
     private String validRequest(String uid) {

@@ -1,48 +1,17 @@
 package MyFirstTestAppSpringBoot.model;
 
-public class Response {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-    private String code;
-    private String errorCode;
-    private String errorMessage;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Response {
+    private Codes code;
+    private ErrorCodes errorCode;
+    private ErrorMessages errorMessage;
     private String operationUid;
     private String systemTime;
     private String uid;
-
-    public Response() {
-    }
-
-    public Response(String code, String errorCode, String errorMessage,
-                    String operationUid, String systemTime, String uid) {
-        this.code = code;
-        this.errorCode = errorCode;
-        this.errorMessage = errorMessage;
-        this.operationUid = operationUid;
-        this.systemTime = systemTime;
-        this.uid = uid;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getErrorCode() {
-        return errorCode;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public String getOperationUid() {
-        return operationUid;
-    }
-
-    public String getSystemTime() {
-        return systemTime;
-    }
-
-    public String getUid() {
-        return uid;
-    }
 }

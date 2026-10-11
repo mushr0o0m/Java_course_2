@@ -1,11 +1,14 @@
 package MyFirstTestAppSpringBoot.model;
 
+import lombok.ToString;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
+@ToString
 public class Request {
 
     @NotBlank
@@ -16,7 +19,7 @@ public class Request {
     @Size(max = 32)
     private String operationUid;
 
-    private String systemName;
+    private Systems systemName;
 
     @NotBlank
     private String systemTime;
@@ -48,11 +51,11 @@ public class Request {
         this.operationUid = operationUid;
     }
 
-    public String getSystemName() {
+    public Systems getSystemName() {
         return systemName;
     }
 
-    public void setSystemName(String systemName) {
+    public void setSystemName(Systems systemName) {
         this.systemName = systemName;
     }
 

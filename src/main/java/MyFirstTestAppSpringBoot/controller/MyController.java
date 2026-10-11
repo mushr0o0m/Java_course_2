@@ -2,66 +2,87 @@ package MyFirstTestAppSpringBoot.controller;
 
 import MyFirstTestAppSpringBoot.exception.UnsupportedCodeException;
 import MyFirstTestAppSpringBoot.exception.ValidationFailedException;
-import MyFirstTestAppSpringBoot.model.Request;
-import MyFirstTestAppSpringBoot.model.Response;
+import MyFirstTestAppSpringBoot.model.*;
 import MyFirstTestAppSpringBoot.service.MyService;
+import MyFirstTestAppSpringBoot.service.ModifyResponseService;
+import MyFirstTestAppSpringBoot.util.DateTimeUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
-import java.time.Instant;
-import java.util.stream.Collectors;
+import java.util.Date;
 
+@Slf4j
 @RestController
 public class MyController {
-
     private final MyService myService;
+    private final ModifyResponseService operationUidService;
+    private final ModifyResponseService systemTimeService;
 
-    public MyController(MyService myService) {
+    public MyController(MyService myService,
+            @Qualifier("ModifyOperationUidResponseService") ModifyResponseService operationUidService,
+            @Qualifier("ModifySystemTimeResponseService") ModifyResponseService systemTimeService) {
         this.myService = myService;
+        this.operationUidService = operationUidService;
+        this.systemTimeService = systemTimeService;
     }
 
-        @PostMapping({"/api/request", "/test"})
+    @PostMapping({"/api/request", "/test"})
     public Response process(@Valid @RequestBody Request request) {
-        return myService.process(request);
+        log.info("Получен запрос: {}", request);
+        Response response = myService.process(request);
+        operationUidService.modify(response);
+        systemTimeService.modify(response);
+        log.info("Отправлен ответ: {}", response);
+        return response;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Response> handleValidation(MethodArgumentNotValidException exception) {
-        String message = exception.getBindingResult().getFieldErrors().stream()
-                .map(this::formatFieldError)
-                .collect(Collectors.joining("; "));
-        return ResponseEntity.badRequest().body(failedResponse("ValidationException", message));
+        log.error("Ошибка проверки запроса: {}", exception.getBindingResult().getTarget());
+        for (FieldError error : exception.getBindingResult().getFieldErrors()) {
+            log.error("bindingResult: {}: {}", error.getField(), error.getDefaultMessage());
+        }
+        return ResponseEntity.badRequest().body(
+                failedResponse(ErrorCodes.VALIDATION_EXCEPTION, ErrorMessages.VALIDATION));
     }
 
     @ExceptionHandler(ValidationFailedException.class)
     public ResponseEntity<Response> handleValidation(ValidationFailedException exception) {
-        return ResponseEntity.badRequest()
-                .body(failedResponse("ValidationException", exception.getMessage()));
+        log.error("Ошибка валидации: {}", exception.getMessage());
+        return ResponseEntity.badRequest().body(
+                failedResponse(ErrorCodes.VALIDATION_EXCEPTION, ErrorMessages.VALIDATION));
     }
 
     @ExceptionHandler(UnsupportedCodeException.class)
     public ResponseEntity<Response> handleUnsupportedCode(UnsupportedCodeException exception) {
-        return ResponseEntity.badRequest()
-                .body(failedResponse("Unsupported Code Exception", "Не поддерживаемая ошибка"));
+        log.error("Ошибка обработки запроса: {}", exception.getMessage());
+        return ResponseEntity.badRequest().body(
+                failedResponse(ErrorCodes.UNSUPPORTED_EXCEPTION, ErrorMessages.UNSUPPORTED));
     }
 
-    private String formatFieldError(FieldError error) {
-        return error.getField() + ": " + error.getDefaultMessage();
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Response> handleInvalidJson(HttpMessageNotReadableException exception) {
+        log.error("Ошибка чтения JSON: {}", exception.getMessage());
+        return ResponseEntity.badRequest().body(
+                failedResponse(ErrorCodes.VALIDATION_EXCEPTION, ErrorMessages.VALIDATION));
     }
 
-    private Response failedResponse(String errorCode, String errorMessage) {
-        return new Response(
-                "failed",
-                errorCode,
-                errorMessage,
-                "",
-                Instant.now().toString(),
-                "");
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Response> handleUnknownError(Exception exception) {
+        log.error("Непредвиденная ошибка", exception);
+        return ResponseEntity.internalServerError().body(
+                failedResponse(ErrorCodes.UNKNOWN_EXCEPTION, ErrorMessages.UNKNOWN));
+    }
+
+    private Response failedResponse(ErrorCodes errorCode, ErrorMessages errorMessage) {
+        Response response = new Response(Codes.FAILED, errorCode, errorMessage, "",
+                DateTimeUtil.getCustomFormat().format(new Date()), "");
+        log.info("Создан и отправлен ответ с ошибкой: {}", response);
+        return response;
     }
 }
